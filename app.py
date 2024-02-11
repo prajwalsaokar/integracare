@@ -1,39 +1,49 @@
-import time
 import streamlit as st
 import pandas as pd
-from .config import load_llm
+from services import get_patient_data
+from config import load_llm, llm_conversation
+from streamlit_chat import message
+import csv_to_sqlite 
+
 
 st.title("Patient Record Dashboard")
-patient_data = st.file_uploader("patientData.csv", type=['csv'])
 
-
-
-
-
+# Data loading
+patient_data = st.file_uploader("Upload Patient Data", type=['csv'])
+data_list = {}
+individual_patients = {}
 model = load_llm()
-
-def get_patient_data(patient_id):
-    return {
-        'name': 'John Doe',
-        'age': '30',
-        'race': 'Caucasian',
-        'phone': '123-456-7890',
-        'medical_history': 'Medical history details here.'
+if patient_data is not None:
+    file = pd.read_csv(patient_data)
+    data_list = get_patient_data(file)
+    
+    individual_patients = {}
+    
+    num_patients = len(data_list['id'])
+    for i in range(num_patients):
+        patient_id = data_list['id'][i]
+        individual_patients[patient_id] = {
+        "id" : data_list['id'][i],
+        "name": data_list['name'][i],
+        "age": data_list['age'][i],
+        "race": data_list['race'][i],
+        "phone": data_list['phone'][i],
+        "medical_history": data_list['medical_history'][i],
+        "Current Appointment Details": data_list['Current Appointment Details'][i],
+        "Prescription": data_list['Prescription'][i],
+        "Other Notes": data_list['Other Notes'][i]
     }
+        
 
-patient_list = {
-    'Patient 1': {'id': 1},
-    'Patient 2': {'id': 2},
-    'Patient 3': {'id': 3},
-    'Patient 4': {'id': 4},
-}
 
 if 'selected_patient_id' not in st.session_state:
     st.session_state['selected_patient_id'] = None
 
 pages = {
+    "Patient Data Manager": "data_management",
     "Search Patients": "search_patients",
-    "Patient Details": "patient_details"
+    "Patient Details": "patient_details",
+    "Appointment Details" : "appointment_details"
 }
 
 st.sidebar.title("Navigation")
@@ -42,54 +52,96 @@ selection = st.sidebar.radio("Go to", list(pages.keys()))
 if selection == "Search Patients":
     st.subheader('Search Patients')
     patient_search_query = st.text_input('')
-    filtered_patients = {name: pat for name, pat in patient_list.items() if patient_search_query.lower() in name.lower()} if patient_search_query else patient_list
-    selected_patient_name = st.radio('Select a patient:', list(filtered_patients.keys()))
+    filtered_patients = {name: pat for name, pat in individual_patients.items() if patient_search_query.lower() in name.lower()} if patient_search_query else individual_patients
+    selected_patient_name = st.selectbox('Select a patient:', list(filtered_patients.keys()), key="patient_dropdown")
     if st.button('Show Details'):
         st.session_state['selected_patient_id'] = filtered_patients[selected_patient_name]['id']
-        st.experimental_rerun()
+        if st.session_state['selected_patient_id']:
+            st.subheader('Patient Details')
+            selected_patient_details = individual_patients[st.session_state['selected_patient_id']]
+            st.write(f"Name: {selected_patient_details['name']}")
+            st.write(f"Age: {selected_patient_details['age']}")
+            st.write(f"Race: {selected_patient_details['race']}")
+            st.write(f"Phone: {selected_patient_details['phone']}")
+            st.write(f"Current Appointment Details: {selected_patient_details['Current Appointment Details']}")
 
 elif selection == "Patient Details":
     col1, col2, col3 = st.columns([1, 2, 2])
     with col1:
         st.subheader('Patient Details')
         if st.session_state['selected_patient_id']:
-            patient_data = get_patient_data(st.session_state['selected_patient_id'])
-            st.write(f"Name: {patient_data['name']}")
-            st.write(f"Age: {patient_data['age']}")
-            st.write(f"Race: {patient_data['race']}")
-            st.write(f"Phone: {patient_data['phone']}")
+            patient_details = individual_patients[st.session_state['selected_patient_id']]
+            with st.expander("Show Patient Details"):
+                st.write(f"Name: {patient_details['name']}")
+                st.write(f"Age: {patient_details['age']}")
+                st.write(f"Race: {patient_details['race']}")
+                st.write(f"Phone: {patient_details['phone']}")
     with col2:
         if st.session_state['selected_patient_id']:
             st.subheader('Medical History')
-            patient_data = get_patient_data(st.session_state['selected_patient_id'])
-            st.write(patient_data['medical_history'])
+            patient_details = individual_patients[st.session_state['selected_patient_id']]
+            st.write(patient_details['medical_history'])
+            
+
     with col3:
-        st.title("Your Assistant")
+        st.title("Ask Your Assistant")
+        if "history" not in st.session_state:
+            st.session_state.history = []
 
-        if "messages" not in st.session_state:
-            st.session_state.messages = []
+        input_text = st.chat_input("Ask me anything", key="chat_input")
 
-        for message in st.session_state.messages:
+        if input_text:
+            chat_response = llm_conversation(input_text=input_text)
+            new_user_message = {"role": "user", "text": input_text}
+            new_chat_response = {"role": "assistant", "text": chat_response}
+            st.session_state.history.insert(0, new_chat_response)
+            st.session_state.history.insert(0, new_user_message)
+
+        for message in st.session_state.history:
             with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+                st.markdown(message["text"])
+        
 
-        if prompt := st.chat_input("Ask something..."):
-            st.session_state.messages.append({"role": "user", "content": prompt})
+elif selection == "Appointment Details":
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.subheader('Patient Details')
+        if st.session_state['selected_patient_id']:
+            patient_details = individual_patients[st.session_state['selected_patient_id']]
+            with st.expander("Show Patient Details"):
+                st.write(f"Name: {patient_details['name']}")
+                st.write(f"Age: {patient_details['age']}")
+                st.write(f"Race: {patient_details['race']}")
+                st.write(f"Phone: {patient_details['phone']}")
+
+    with col2:
+        st.subheader('Appointment Details')
+        if st.session_state['selected_patient_id']:
+            patient_details = individual_patients[st.session_state['selected_patient_id']]
+            with st.expander("Show Appointment Details"):
+                st.write(f"Prescription: {patient_details['Prescription']}")
+                other_notes = st.text_area("Other Notes", patient_details['Other Notes'])
+                individual_patients[st.session_state['selected_patient_id']]['Other Notes'] = other_notes
+
+    with col3:
+        st.title("Ask Your Assistant")
+        if "history" not in st.session_state:
+            st.session_state.history = []
+        for message in st.session_state.history:
+            with st.chat_message(message["role"]):
+                st.markdown(message["text"])
+        input_text = st.chat_input("Ask me anything")
+        if input_text:
             with st.chat_message("user"):
-                st.markdown(prompt)
-
+                st.markdown(input_text)
+            st.session_state.history.append({"role": "user", "text": input_text})
+            chat_response = llm_conversation(input_text = input_text)
             with st.chat_message("assistant"):
-                message_placeholder = st.empty()
-                full_response = ""
-
-                result = model.predict(input=prompt)
-
-                # Simulate stream of response with milliseconds delay
-                for chunk in result.split():
-                    full_response += chunk + " "
-                    time.sleep(0.05)
-                    message_placeholder.markdown(full_response + "▌")
-
-                message_placeholder.markdown(full_response)
-
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
+                st.markdown(chat_response)
+            st.session_state.history.append({"role": "assistant", "text": chat_response})
+elif selection == "Patient Data Manager":
+    st.subheader("Patient Data Manager")
+    st.write("Upload a CSV file to get started")
+    st.write("You can also search for patients and view their details")
+    st.write("You can also view appointment details")
