@@ -16,20 +16,23 @@ Before you can run the application, you need to install the necessary requiremen
 ## Virtual Environment
 It is recommended to create a virtual environment:
     
-    ```
+    ```shell
     python -m venv venv
     source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+    ```
 
 ## Installing Dependencies
 Install all of the dependencies that are needed for the run:
     
-    ```
+    ```shell
     python -m venv venv
+    ```
 
 ## Running the Application
 To start the Streamlit web application, run the following command in your terminal:
     
-    ```
+    ```shell
     streamlit run app.py
+    ```
 
 The application will start, and you should see a URL displayed in your terminal, typically `http://localhost:8501`. Open this URL in your web browser to interact with the application.
