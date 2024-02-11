@@ -15,7 +15,8 @@ def get_patient_data(data):
         "medical_history": data['Medical History'],
         "Current Appointment Details" : data["Current Appointment Details"],
         "Prescription" : data["Prescription"],
-        "Other Notes" : data["Other Notes"]
+        "Other Notes" : data["Other Notes"],
+        "Family History" : data["Family History"],
     }
 
     return data_list

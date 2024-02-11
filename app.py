@@ -5,60 +5,36 @@ from config import load_llm, llm_conversation
 from streamlit_chat import message
 import sqlite3
 
-
 st.title("Patient Record Dashboard")
 
 # Data loading
-patient_data = st.file_uploader("Upload Patient Data", type=['csv'])
-data_list = {}
+file = pd.read_sql("SELECT * FROM patients", sqlite3.connect("patients.db"))
+data_list = get_patient_data(file)
 individual_patients = {}
-model = load_llm()
-conn = sqlite3.connect('patient_data.db')
 
-if patient_data is not None:
-    file = pd.read_csv(patient_data)
-    data_list = get_patient_data(file)
-    
-    for i, row in enumerate(data_list):
-        if i == 0:
-            # Create table based on column names
-            create_table_query = f"CREATE TABLE IF NOT EXISTS patient_data ({', '.join(data_list.columns)})"
-            conn.execute(create_table_query)
-        # Insert row into SQLite table
-        insert_query = f"INSERT INTO patient_data VALUES {tuple(row)}"
-        conn.execute(insert_query)
+num_patients = len(data_list['id'])
+for i in range(num_patients):
+    patient_id = data_list['id'][i]
+    individual_patients[patient_id] = {
+    "id" : data_list['id'][i],
+    "name": data_list['name'][i],
+    "age": data_list['age'][i],
+    "race": data_list['race'][i],
+    "phone": data_list['phone'][i],
+    "medical_history": data_list['medical_history'][i],
+    "Current Appointment Details": data_list['Current Appointment Details'][i],
+    "Prescription": data_list['Prescription'][i],
+    "Other Notes": data_list['Other Notes'][i],
+    "Family History": data_list['Family History'][i]
+}
 
-    # Commit changes
-    conn.commit()
     
-    # Close connection
-    conn.close()
-    
-    individual_patients = {}
-    
-    num_patients = len(data_list['id'])
-    for i in range(num_patients):
-        patient_id = data_list['id'][i]
-        individual_patients[patient_id] = {
-        "id" : data_list['id'][i],
-        "name": data_list['name'][i],
-        "age": data_list['age'][i],
-        "race": data_list['race'][i],
-        "phone": data_list['phone'][i],
-        "medical_history": data_list['medical_history'][i],
-        "Current Appointment Details": data_list['Current Appointment Details'][i],
-        "Prescription": data_list['Prescription'][i],
-        "Other Notes": data_list['Other Notes'][i]
-    }
-        
-
-
 if 'selected_patient_id' not in st.session_state:
     st.session_state['selected_patient_id'] = None
 
 pages = {
-    "Patient Data Manager": "data_management",
     "Search Patients": "search_patients",
+    "Patient Data Manager": "data_management",
     "Patient Details": "patient_details",
     "Appointment Details" : "appointment_details"
 }
@@ -68,10 +44,10 @@ selection = st.sidebar.radio("Go to", list(pages.keys()))
 
 if selection == "Search Patients":
     st.subheader('Search Patients')
-    patient_search_query = st.text_input('')
-    filtered_patients = {name: pat for name, pat in individual_patients.items() if patient_search_query.lower() in name.lower()} if patient_search_query else individual_patients
+    patient_search_query = str(st.text_input(''))
+    filtered_patients = {name: pat for name, pat in individual_patients.items() if patient_search_query.lower() in str(name).lower()} if patient_search_query else individual_patients
     selected_patient_name = st.selectbox('Select a patient:', list(filtered_patients.keys()), key="patient_dropdown")
-    if st.button('Show Details'):
+    if st.button('Select'):
         st.session_state['selected_patient_id'] = filtered_patients[selected_patient_name]['id']
         if st.session_state['selected_patient_id']:
             st.subheader('Patient Details')
@@ -157,8 +133,42 @@ elif selection == "Appointment Details":
             with st.chat_message("assistant"):
                 st.markdown(chat_response)
             st.session_state.history.append({"role": "assistant", "text": chat_response})
+
+
 elif selection == "Patient Data Manager":
     st.subheader("Patient Data Manager")
-    st.write("Upload a CSV file to get started")
-    st.write("You can also search for patients and view their details")
-    st.write("You can also view appointment details")
+    if st.session_state['selected_patient_id'] is not None:
+        st.markdown(f"<h4>Patient: {st.session_state['selected_patient_id']}<h4>", unsafe_allow_html=True)
+    else:
+        st.markdown("<h4>No patient selected<h4>", unsafe_allow_html=True)
+    patient_data = st.file_uploader("Upload Spreadsheet Records", type=['csv'])
+    patient_pdf = st.file_uploader("Upload PDF Records", type=['pdf'])
+    patient_image = st.file_uploader("Upload Screenshot of Records", type=['png'])
+
+
+    data_list = {}
+    individual_patients = {}
+    model = load_llm()
+
+    if patient_data is not None:
+        file = pd.read_csv(patient_data)
+        data_list = get_patient_data(file)
+        
+        individual_patients = {}
+        
+        num_patients = len(data_list['id'])
+        for i in range(num_patients):
+            patient_id = data_list['id'][i]
+            individual_patients[patient_id] = {
+            "id" : data_list['id'][i],
+            "name": data_list['name'][i],
+            "age": data_list['age'][i],
+            "race": data_list['race'][i],
+            "phone": data_list['phone'][i],
+            "medical_history": data_list['medical_history'][i],
+            "Current Appointment Details": data_list['Current Appointment Details'][i],
+            "Prescription": data_list['Prescription'][i],
+            "Other Notes": data_list['Other Notes'][i]
+        }
+            
+
