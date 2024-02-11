@@ -1,4 +1,4 @@
-Name,Age,Race,Contact,Patient ID,Medical History,Current Appointment Details,Prescription,Other Notes,Family History
+Name,Age,Race,Contact,Patient ID,Medical History,Current Appointment Details,Prescription,Other Notes,Family History,EXT_RAW, EXT_Summary, FINAL_SUM
 John Smith,45,White,555-123-4567,1001,"Hypertension, Diabetes, Allergies to Penicillin","2024-02-10, 10:00 AM, Room 201","Lisinopril 10mg, Metformin 500mg","Requires follow-up in 3 months.","Family history of hypertension and diabetes"
 Mary Johnson,62,Black,555-234-5678,1002,"Asthma, Arthritis, High Cholesterol","2024-02-12, 11:30 AM, Room 305","Albuterol inhaler, Prednisone 5mg","Scheduled for a bone density test next month.","Family history of arthritis"
 David Lee,30,Asian,555-345-6789,1003,"Migraines, Anxiety, Previous knee surgery","2024-02-11, 9:15 AM, Room 104","Sumatriptan 50mg, Sertraline 25mg","Requires referral to a neurologist.","No family history of significant medical conditions"
