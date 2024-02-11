@@ -1,11 +1,11 @@
 import streamlit as st
 import pandas as pd
-from services import get_patient_data, summarize_ext_health
+from services import get_patient_data, summarize_ext_health, summarize_patient_health
 from config import load_llm, llm_conversation
 from streamlit_chat import message
 import sqlite3
 from langchain_community.document_loaders import PyPDFLoader, image
-from dbops import raw_to_sqlite, df_to_sqlite, get_raw_ext_data, get_ext_sum, upload_ext_summary
+from dbops import raw_to_sqlite, df_to_sqlite, get_ext_sum, get_full_sum
 
 # button css
 custom_css = """
@@ -272,7 +272,8 @@ elif selection == "Patient Details":
                 """, unsafe_allow_html=True)
                 st.write(f"Medical History: {patient_details['medical_history']}")
                 st.write(f"Family History: {patient_details['Family History']}")
-                st.write(f"EXT SUM: {get_ext_sum(st.session_state['selected_patient_id'])}")
+                out_of_network_info = get_ext_sum(st.session_state['selected_patient_id'])[0]
+                st.write(f"Out of Network Information: {out_of_network_info}")
          
     with col3:
         st.subheader("Ask Your Assistant")
@@ -280,9 +281,11 @@ elif selection == "Patient Details":
             st.session_state.history = []
 
         input_text = st.chat_input("Ask me anything", key="chat_input")
-
+        sum = ""
+        if "selected_patient_id" in st.session_state:
+            sum = get_full_sum(st.session_state['selected_patient_id'])
         if input_text:
-            chat_response = llm_conversation(input_text=input_text)
+            chat_response = llm_conversation(input_text=input_text, full_summary= sum)
             new_user_message = {"role": "user", "text": input_text}
             new_chat_response = {"role": "assistant", "text": chat_response}
             st.session_state.history.insert(0, new_chat_response)
@@ -373,18 +376,21 @@ elif selection == "Appointment Details":
         st.subheader("Ask Your Assistant")
         if "history" not in st.session_state:
             st.session_state.history = []
+
+        input_text = st.chat_input("Ask me anything", key="chat_input")
+        sum = ""
+        if "selected_patient_id" in st.session_state:
+            sum = get_full_sum(st.session_state['selected_patient_id'])
+        if input_text:
+            chat_response = llm_conversation(input_text=input_text, full_summary= sum)
+            new_user_message = {"role": "user", "text": input_text}
+            new_chat_response = {"role": "assistant", "text": chat_response}
+            st.session_state.history.insert(0, new_chat_response)
+            st.session_state.history.insert(0, new_user_message)
+
         for message in st.session_state.history:
             with st.chat_message(message["role"]):
                 st.markdown(message["text"])
-        input_text = st.chat_input("Ask me anything")
-        if input_text:
-            with st.chat_message("user"):
-                st.markdown(input_text)
-            st.session_state.history.append({"role": "user", "text": input_text})
-            chat_response = llm_conversation(input_text = input_text)
-            with st.chat_message("assistant"):
-                st.markdown(chat_response)
-            st.session_state.history.append({"role": "assistant", "text": chat_response})
 
 
 elif selection == "Patient Data Manager":
@@ -410,6 +416,7 @@ elif selection == "Patient Data Manager":
         if st.session_state['selected_patient_id'] is not None:
             raw_to_sqlite(page, st.session_state['selected_patient_id'])
             summarize_ext_health(st.session_state['selected_patient_id'])
+            summarize_patient_health(st.session_state['selected_patient_id'])
 
     if patient_data is not None:
         if st.session_state['selected_patient_id'] is not None:
@@ -420,6 +427,10 @@ elif selection == "Patient Data Manager":
             image_loader = image.UnstructuredImageLoader(patient_image)
             image_data = image_loader.load()[0].page_content
             raw_to_sqlite(image_data, st.session_state['selected_patient_id'])
+            summarize_ext_health(st.session_state['selected_patient_id'])
+            summarize_patient_health(st.session_state['selected_patient_id'])
+
+
 
 
     
