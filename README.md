@@ -12,6 +12,7 @@ Before you can run the application, you need to install the necessary requiremen
    ```bash
    git clone https://github.com/prajwalsaokar/integracare.git
    cd integracare
+   ```
 
 ## Virtual Environment
 It is recommended to create a virtual environment:
