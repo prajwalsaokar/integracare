@@ -4,6 +4,7 @@ from services import get_patient_data
 from config import load_llm, llm_conversation
 from streamlit_chat import message
 import sqlite3
+from langchain_community.document_loaders import PyPDFLoader
 
 st.title("Patient Record Dashboard")
 
@@ -71,9 +72,10 @@ elif selection == "Patient Details":
                 st.write(f"Phone: {patient_details['phone']}")
     with col2:
         if st.session_state['selected_patient_id']:
-            st.subheader('Medical History')
+            st.subheader('Full Medical History')
             patient_details = individual_patients[st.session_state['selected_patient_id']]
             st.write(patient_details['medical_history'])
+            st.write(patient_details['Family History'])
             
 
     with col3:
@@ -144,6 +146,10 @@ elif selection == "Patient Data Manager":
     patient_data = st.file_uploader("Upload Spreadsheet Records", type=['csv'])
     patient_pdf = st.file_uploader("Upload PDF Records", type=['pdf'])
     patient_image = st.file_uploader("Upload Screenshot of Records", type=['png'])
+
+    loader = PyPDFLoader(patient_pdf)
+    page = loader.load_pages()[0].page_content
+    
 
 
     data_list = {}
