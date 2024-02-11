@@ -3,7 +3,7 @@ import pandas as pd
 from services import get_patient_data
 from config import load_llm, llm_conversation
 from streamlit_chat import message
-import csv_to_sqlite 
+import sqlite3
 
 
 st.title("Patient Record Dashboard")
@@ -13,9 +13,26 @@ patient_data = st.file_uploader("Upload Patient Data", type=['csv'])
 data_list = {}
 individual_patients = {}
 model = load_llm()
+conn = sqlite3.connect('patient_data.db')
+
 if patient_data is not None:
     file = pd.read_csv(patient_data)
     data_list = get_patient_data(file)
+    
+    for i, row in enumerate(data_list):
+        if i == 0:
+            # Create table based on column names
+            create_table_query = f"CREATE TABLE IF NOT EXISTS patient_data ({', '.join(data_list.columns)})"
+            conn.execute(create_table_query)
+        # Insert row into SQLite table
+        insert_query = f"INSERT INTO patient_data VALUES {tuple(row)}"
+        conn.execute(insert_query)
+
+    # Commit changes
+    conn.commit()
+    
+    # Close connection
+    conn.close()
     
     individual_patients = {}
     
