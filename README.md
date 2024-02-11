@@ -17,7 +17,7 @@ Before you can run the application, you need to install the necessary requiremen
 ## Virtual Environment
 It is recommended to create a virtual environment:
     
-    ```shell
+    ```bash
     python -m venv venv
     source venv/bin/activate  # On Windows use `venv\Scripts\activate`
     ```
@@ -25,14 +25,14 @@ It is recommended to create a virtual environment:
 ## Installing Dependencies
 Install all of the dependencies that are needed for the run:
     
-    ```shell
+    ```bash
     python -m venv venv
     ```
 
 ## Running the Application
 To start the Streamlit web application, run the following command in your terminal:
     
-    ```shell
+    ```bash
     streamlit run app.py
     ```
 
