@@ -16,16 +16,17 @@ import streamlit as st
 import re
 import os
 
-if os.getenv("AWS_ACCESS_KEY_ID") is not None and os.getenv("AWS_SECRET_ACCESS_KEY") is not None:
+if os.getenv("AWS_ACCESS_KEY_ID") is not None:
     session = boto3.Session(
         region_name='us-east-1',
         aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
         aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
     )
-session = boto3.Session(
-    profile_name='default',
-    region_name='us-east-1'
-)
+else:
+    session = boto3.Session(
+        profile_name='default',
+        region_name='us-east-1'
+    )
 
 bedrock_runtime = boto3.client(
     service_name="bedrock-runtime",
